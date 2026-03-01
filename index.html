@@ -2,49 +2,260 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>채팅앱</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>네모 게임</title>
   <style>
-    body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 0 20px; }
-    #messages { list-style: none; padding: 0; height: 400px; overflow-y: scroll; border: 1px solid #ddd; border-radius: 8px; padding: 10px; }
-    #messages li { padding: 8px; margin: 4px 0; background: #f0f0f0; border-radius: 6px; }
-    #form { display: flex; gap: 10px; margin-top: 10px; }
-    #input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; }
-    button { padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; }
-    button:hover { background: #45a049; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #1a1a2e; color: white; font-family: sans-serif; overflow: hidden; }
+
+    #login-screen {
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      background: #1a1a2e; z-index: 100;
+    }
+    #login-screen h1 { font-size: 2rem; margin-bottom: 20px; color: #eee; }
+    #login-screen input {
+      padding: 12px 20px; font-size: 1rem;
+      border: 2px solid #444; border-radius: 8px;
+      background: #2a2a4e; color: white;
+      outline: none; margin-bottom: 12px; width: 250px;
+    }
+    #login-screen button {
+      padding: 12px 40px; font-size: 1rem;
+      background: #3498db; color: white;
+      border: none; border-radius: 8px; cursor: pointer; width: 250px;
+    }
+
+    #game-screen { display: none; }
+
+    canvas {
+      display: block;
+      background: #16213e;
+    }
+
+    #chat-container {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: rgba(0,0,0,0.6);
+      padding: 8px;
+    }
+    #chat-messages {
+      height: 100px; overflow-y: auto;
+      font-size: 0.8rem; margin-bottom: 6px;
+      padding: 4px;
+    }
+    #chat-messages p { margin: 2px 0; }
+    #chat-messages .system { color: #aaa; font-style: italic; }
+    #chat-input-row { display: flex; gap: 6px; }
+    #chat-input {
+      flex: 1; padding: 8px;
+      background: #2a2a4e; color: white;
+      border: 1px solid #444; border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    #chat-send {
+      padding: 8px 16px;
+      background: #3498db; color: white;
+      border: none; border-radius: 6px; cursor: pointer;
+    }
+
+    /* 모바일 조이스틱 */
+    #joystick {
+      position: fixed; bottom: 160px; left: 30px;
+      width: 120px; height: 120px;
+      display: none;
+    }
+    #joystick-base {
+      position: absolute; inset: 0;
+      background: rgba(255,255,255,0.1);
+      border-radius: 50%; border: 2px solid rgba(255,255,255,0.3);
+    }
+    #joystick-stick {
+      position: absolute;
+      width: 50px; height: 50px;
+      background: rgba(255,255,255,0.5);
+      border-radius: 50%;
+      top: 35px; left: 35px;
+      transition: transform 0.05s;
+    }
   </style>
 </head>
 <body>
-  <h2>💬 실시간 채팅</h2>
-  <ul id="messages"></ul>
-  <div id="form">
-    <input id="input" placeholder="메시지를 입력하세요..." autocomplete="off" />
-    <button onclick="sendMessage()">전송</button>
+
+<div id="login-screen">
+  <h1>네모 게임</h1>
+  <input id="nickname-input" placeholder="닉네임 입력" maxlength="10" />
+  <button onclick="joinGame()">입장</button>
+</div>
+
+<div id="game-screen">
+  <canvas id="canvas"></canvas>
+  <div id="chat-container">
+    <div id="chat-messages"></div>
+    <div id="chat-input-row">
+      <input id="chat-input" placeholder="채팅 입력..." autocomplete="off" />
+      <button id="chat-send" onclick="sendChat()">전송</button>
+    </div>
   </div>
+  <div id="joystick">
+    <div id="joystick-base"></div>
+    <div id="joystick-stick"></div>
+  </div>
+</div>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const socket = io();
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  let players = {};
+  let myId = null;
+  let keys = {};
 
-    // 메시지 받으면 화면에 표시
-    socket.on('chat message', (msg) => {
-      const li = document.createElement('li');
-      li.textContent = msg;
-      document.getElementById('messages').appendChild(li);
-    });
+  // 캔버스 크기 설정
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
 
-    // 메시지 전송
-    function sendMessage() {
-      const input = document.getElementById('input');
-      if (input.value) {
-        socket.emit('chat message', input.value);
-        input.value = '';
-      }
+  // 입장
+  function joinGame() {
+    const nickname = document.getElementById('nickname-input').value.trim();
+    if (!nickname) return alert('닉네임을 입력해주세요!');
+    myId = socket.id;
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('game-screen').style.display = 'block';
+
+    // 모바일이면 조이스틱 표시
+    if ('ontouchstart' in window) {
+      document.getElementById('joystick').style.display = 'block';
     }
 
-    // 엔터키로도 전송
-    document.getElementById('input').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') sendMessage();
+    socket.emit('join', nickname);
+  }
+
+  // 엔터키 입장
+  document.getElementById('nickname-input').addEventListener('keypress', e => {
+    if (e.key === 'Enter') joinGame();
+  });
+
+  // 플레이어 업데이트
+  socket.on('players', (data) => { players = data; });
+
+  // 채팅
+  socket.on('chat', (data) => {
+    const div = document.getElementById('chat-messages');
+    const p = document.createElement('p');
+    if (data.system) {
+      p.className = 'system';
+      p.textContent = data.message;
+    } else {
+      p.innerHTML = '<b style="color:' + (players[socket.id]?.color || '#fff') + '">' + data.nickname + '</b>: ' + data.message;
+    }
+    div.appendChild(p);
+    div.scrollTop = div.scrollHeight;
+  });
+
+  // 채팅 전송
+  function sendChat() {
+    const input = document.getElementById('chat-input');
+    if (input.value.trim()) {
+      socket.emit('chat', input.value.trim());
+      input.value = '';
+    }
+  }
+  document.getElementById('chat-input').addEventListener('keypress', e => {
+    if (e.key === 'Enter') sendChat();
+  });
+
+  // PC 키보드
+  document.addEventListener('keydown', e => { keys[e.key] = true; });
+  document.addEventListener('keyup', e => { keys[e.key] = false; });
+
+  // 이동 전송
+  setInterval(() => {
+    socket.emit('move', {
+      up: keys['ArrowUp'] || keys['w'],
+      down: keys['ArrowDown'] || keys['s'],
+      left: keys['ArrowLeft'] || keys['a'],
+      right: keys['ArrowRight'] || keys['d'],
     });
-  </script>
+  }, 1000 / 60);
+
+  // 모바일 조이스틱
+  const joystick = document.getElementById('joystick');
+  const stick = document.getElementById('joystick-stick');
+  let joystickActive = false;
+  let joystickDir = { up: false, down: false, left: false, right: false };
+
+  joystick.addEventListener('touchstart', e => { joystickActive = true; });
+  joystick.addEventListener('touchmove', e => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = joystick.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dx = touch.clientX - cx;
+    const dy = touch.clientY - cy;
+    const dist = Math.min(40, Math.sqrt(dx*dx + dy*dy));
+    const angle = Math.atan2(dy, dx);
+    stick.style.transform = `translate(${Math.cos(angle)*dist}px, ${Math.sin(angle)*dist}px)`;
+    joystickDir = {
+      up: dy < -15,
+      down: dy > 15,
+      left: dx < -15,
+      right: dx > 15
+    };
+    socket.emit('move', joystickDir);
+  }, { passive: false });
+  joystick.addEventListener('touchend', () => {
+    joystickActive = false;
+    stick.style.transform = 'translate(0,0)';
+    socket.emit('move', { up: false, down: false, left: false, right: false });
+  });
+
+  // 게임 렌더링
+  function render() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 배경 격자
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < canvas.width; x += 50) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+    }
+    for (let y = 0; y < canvas.height; y += 50) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+    }
+
+    // 플레이어 그리기
+    Object.values(players).forEach(p => {
+      const isMe = p.id === socket.id;
+
+      // 네모
+      ctx.fillStyle = p.color;
+      ctx.shadowColor = p.color;
+      ctx.shadowBlur = isMe ? 15 : 5;
+      ctx.fillRect(p.x - 20, p.y - 20, 40, 40);
+      ctx.shadowBlur = 0;
+
+      // 테두리 (내 캐릭터는 흰색)
+      ctx.strokeStyle = isMe ? 'white' : 'rgba(255,255,255,0.3)';
+      ctx.lineWidth = isMe ? 2 : 1;
+      ctx.strokeRect(p.x - 20, p.y - 20, 40, 40);
+
+      // 닉네임
+      ctx.fillStyle = 'white';
+      ctx.font = '13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(p.nickname, p.x, p.y - 28);
+    });
+
+    requestAnimationFrame(render);
+  }
+  render();
+</script>
 </body>
 </html>
