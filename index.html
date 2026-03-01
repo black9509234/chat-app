@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>채팅앱</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 0 20px; }
+    #messages { list-style: none; padding: 0; height: 400px; overflow-y: scroll; border: 1px solid #ddd; border-radius: 8px; padding: 10px; }
+    #messages li { padding: 8px; margin: 4px 0; background: #f0f0f0; border-radius: 6px; }
+    #form { display: flex; gap: 10px; margin-top: 10px; }
+    #input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; }
+    button { padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; }
+    button:hover { background: #45a049; }
+  </style>
+</head>
+<body>
+  <h2>💬 실시간 채팅</h2>
+  <ul id="messages"></ul>
+  <div id="form">
+    <input id="input" placeholder="메시지를 입력하세요..." autocomplete="off" />
+    <button onclick="sendMessage()">전송</button>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    // 메시지 받으면 화면에 표시
+    socket.on('chat message', (msg) => {
+      const li = document.createElement('li');
+      li.textContent = msg;
+      document.getElementById('messages').appendChild(li);
+    });
+
+    // 메시지 전송
+    function sendMessage() {
+      const input = document.getElementById('input');
+      if (input.value) {
+        socket.emit('chat message', input.value);
+        input.value = '';
+      }
+    }
+
+    // 엔터키로도 전송
+    document.getElementById('input').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendMessage();
+    });
+  </script>
+</body>
+</html>
