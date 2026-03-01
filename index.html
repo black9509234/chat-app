@@ -1,474 +1,520 @@
 <!DOCTYPE html>
 <html lang="ko">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>네모 RPG</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>네모 RPG</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #1a1a2e; color: white; font-family: sans-serif; overflow: hidden; touch-action: none; }
 
-        body {
-            background: #1a1a2e;
-            color: white;
-            font-family: sans-serif;
-            overflow: hidden;
-        }
+    /* 로그인 */
+    #login-screen {
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      background: #1a1a2e; z-index: 100; gap: 12px;
+    }
+    #login-screen h1 { font-size: 2.2rem; color: #eee; letter-spacing: 3px; }
+    #login-screen p { color: #888; font-size: 0.85rem; }
+    #login-screen input {
+      padding: 12px 20px; font-size: 1rem;
+      border: 2px solid #444; border-radius: 8px;
+      background: #2a2a4e; color: white;
+      outline: none; width: 280px; text-align: center;
+    }
+    .job-select { display: flex; gap: 10px; }
+    .job-btn {
+      width: 86px; padding: 10px 0;
+      border: 2px solid #444; border-radius: 10px;
+      background: #2a2a4e; color: #aaa;
+      cursor: pointer; text-align: center; font-size: 0.82rem;
+      transition: all 0.15s;
+    }
+    .job-btn .ji { font-size: 1.5rem; display: block; margin-bottom: 3px; }
+    .job-btn.selected { border-color: #3498db; color: white; background: #1a3a5e; }
+    #start-btn {
+      padding: 13px 0; font-size: 1rem;
+      background: #3498db; color: white;
+      border: none; border-radius: 8px; cursor: pointer; width: 280px;
+      letter-spacing: 1px;
+    }
 
-        /* 로그인 화면 */
-        #login-screen {
-            position: fixed;
-            inset: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: #1a1a2e;
-            z-index: 100;
-        }
+    /* 게임 */
+    #game-screen { display: none; }
+    canvas { display: block; }
 
-        #login-screen h1 {
-            font-size: 2.5rem;
-            margin-bottom: 8px;
-            color: #eee;
-            letter-spacing: 2px;
-        }
+    /* 채팅 */
+    #chat-container {
+      position: fixed; top: 10px; left: 10px;
+      width: 260px;
+      background: rgba(0,0,0,0.6);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px; overflow: hidden;
+      z-index: 10;
+    }
+    #chat-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 5px 10px;
+      background: rgba(255,255,255,0.07);
+      cursor: pointer; user-select: none;
+      font-size: 0.78rem; color: #ccc;
+    }
+    #chat-toggle-btn { background: none; border: none; color: #ccc; cursor: pointer; font-size: 0.8rem; }
+    #chat-body { max-height: 220px; transition: max-height 0.2s; overflow: hidden; }
+    #chat-body.collapsed { max-height: 0; }
+    #chat-messages { height: 120px; overflow-y: auto; font-size: 0.76rem; padding: 5px 7px; }
+    #chat-messages p { margin: 1px 0; line-height: 1.4; }
+    #chat-messages .system { color: #999; font-style: italic; }
+    #chat-input-row { display: flex; gap: 4px; padding: 5px 7px; border-top: 1px solid rgba(255,255,255,0.08); }
+    #chat-input {
+      flex: 1; padding: 5px 7px;
+      background: #1a1a3e; color: white;
+      border: 1px solid #444; border-radius: 5px; font-size: 0.8rem;
+    }
+    #chat-send {
+      padding: 5px 9px; background: #3498db; color: white;
+      border: none; border-radius: 5px; cursor: pointer; font-size: 0.8rem;
+    }
 
-        #login-screen p {
-            color: #888;
-            margin-bottom: 24px;
-            font-size: 0.9rem;
-        }
+    /* 미니맵 */
+    #minimap {
+      position: fixed; top: 10px; right: 10px;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-radius: 5px; z-index: 10;
+    }
 
-        #login-screen input {
-            padding: 12px 20px;
-            font-size: 1rem;
-            border: 2px solid #444;
-            border-radius: 8px;
-            background: #2a2a4e;
-            color: white;
-            outline: none;
-            margin-bottom: 12px;
-            width: 260px;
-            text-align: center;
-        }
+    /* 스탯 UI */
+    #stat-ui {
+      position: fixed; bottom: 16px; right: 16px;
+      background: rgba(0,0,0,0.6);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 10px; padding: 9px 13px;
+      min-width: 150px; font-size: 0.78rem; z-index: 10;
+    }
+    #stat-ui .sname { font-size: 0.9rem; font-weight: bold; margin-bottom: 5px; color: #eee; }
+    #stat-ui .srow { display: flex; justify-content: space-between; margin: 2px 0; color: #bbb; }
+    .bwrap { margin: 4px 0; }
+    .blabel { font-size: 0.72rem; color: #999; margin-bottom: 1px; }
+    .bbg { background: rgba(255,255,255,0.1); border-radius: 3px; height: 7px; }
+    .bfill { height: 7px; border-radius: 3px; transition: width 0.4s; }
+    .hp-bar { background: #e74c3c; }
+    .exp-bar { background: #f39c12; }
 
-        #login-screen button {
-            padding: 12px 40px;
-            font-size: 1rem;
-            background: #3498db;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            width: 260px;
-            letter-spacing: 1px;
-        }
-
-        #login-screen button:hover {
-            background: #2980b9;
-        }
-
-        /* 게임 화면 */
-        #game-screen {
-            display: none;
-        }
-
-        canvas {
-            display: block;
-        }
-
-        /* 채팅 */
-        #chat-container {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: rgba(0, 0, 0, 0.65);
-            padding: 8px;
-        }
-
-        #chat-messages {
-            height: 90px;
-            overflow-y: auto;
-            font-size: 0.78rem;
-            margin-bottom: 6px;
-            padding: 4px;
-        }
-
-        #chat-messages p {
-            margin: 2px 0;
-        }
-
-        #chat-messages .system {
-            color: #aaa;
-            font-style: italic;
-        }
-
-        #chat-input-row {
-            display: flex;
-            gap: 6px;
-        }
-
-        #chat-input {
-            flex: 1;
-            padding: 8px;
-            background: #2a2a4e;
-            color: white;
-            border: 1px solid #444;
-            border-radius: 6px;
-            font-size: 0.9rem;
-        }
-
-        #chat-send {
-            padding: 8px 16px;
-            background: #3498db;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-
-        /* 미니맵 */
-        #minimap {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            width: 150px;
-            height: 150px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 4px;
-            background: rgba(0, 0, 0, 0.5);
-        }
-
-        /* 조이스틱 */
-        #joystick {
-            position: fixed;
-            bottom: 160px;
-            left: 30px;
-            width: 120px;
-            height: 120px;
-            display: none;
-        }
-
-        #joystick-base {
-            position: absolute;
-            inset: 0;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-        }
-
-        #joystick-stick {
-            position: absolute;
-            width: 50px;
-            height: 50px;
-            background: rgba(255, 255, 255, 0.5);
-            border-radius: 50%;
-            top: 35px;
-            left: 35px;
-            transition: transform 0.05s;
-        }
-    </style>
+    /* 조이스틱 */
+    #joystick {
+      position: fixed; bottom: 30px; left: 30px;
+      width: 110px; height: 110px; display: none; z-index: 10;
+    }
+    #joystick-base {
+      position: absolute; inset: 0;
+      background: rgba(255,255,255,0.08);
+      border-radius: 50%; border: 2px solid rgba(255,255,255,0.25);
+    }
+    #joystick-stick {
+      position: absolute; width: 46px; height: 46px;
+      background: rgba(255,255,255,0.4); border-radius: 50%;
+      top: 32px; left: 32px;
+    }
+  </style>
 </head>
-
 <body>
 
-    <div id="login-screen">
-        <h1>네모 RPG</h1>
-        <p>광활한 세계로 모험을 떠나세요</p>
-        <input id="nickname-input" placeholder="닉네임 입력" maxlength="10" />
-        <button onclick="joinGame()">모험 시작</button>
+<div id="login-screen">
+  <h1>네모 RPG</h1>
+  <p>직업을 선택하고 모험을 시작하세요</p>
+  <input id="nickname-input" placeholder="닉네임 입력" maxlength="10" />
+  <div class="job-select">
+    <div class="job-btn selected" data-job="warrior"><span class="ji">🗡️</span>전사</div>
+    <div class="job-btn" data-job="mage"><span class="ji">🔮</span>마법사</div>
+    <div class="job-btn" data-job="archer"><span class="ji">🏹</span>궁수</div>
+  </div>
+  <button id="start-btn" onclick="joinGame()">모험 시작</button>
+</div>
+
+<div id="game-screen">
+  <canvas id="canvas"></canvas>
+  <canvas id="minimap" width="120" height="120"></canvas>
+
+  <div id="chat-container">
+    <div id="chat-header" onclick="toggleChat()">
+      <span>채팅</span>
+      <button id="chat-toggle-btn">▲</button>
     </div>
-
-    <div id="game-screen">
-        <canvas id="canvas"></canvas>
-        <canvas id="minimap"></canvas>
-        <div id="chat-container">
-            <div id="chat-messages"></div>
-            <div id="chat-input-row">
-                <input id="chat-input" placeholder="채팅 입력..." autocomplete="off" />
-                <button id="chat-send" onclick="sendChat()">전송</button>
-            </div>
-        </div>
-        <div id="joystick">
-            <div id="joystick-base"></div>
-            <div id="joystick-stick"></div>
-        </div>
+    <div id="chat-body">
+      <div id="chat-messages"></div>
+      <div id="chat-input-row">
+        <input id="chat-input" placeholder="메시지..." autocomplete="off" />
+        <button id="chat-send" onclick="sendChat()">전송</button>
+      </div>
     </div>
+  </div>
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-        const socket = io();
+  <div id="stat-ui">
+    <div class="sname" id="ui-name">-</div>
+    <div class="bwrap">
+      <div class="blabel">HP</div>
+      <div class="bbg"><div class="bfill hp-bar" id="hp-bar" style="width:100%"></div></div>
+    </div>
+    <div class="bwrap">
+      <div class="blabel">EXP</div>
+      <div class="bbg"><div class="bfill exp-bar" id="exp-bar" style="width:0%"></div></div>
+    </div>
+    <div class="srow"><span>레벨</span><span id="ui-level">1</span></div>
+    <div class="srow"><span>공격</span><span id="ui-atk">-</span></div>
+    <div class="srow"><span>방어</span><span id="ui-def">-</span></div>
+  </div>
 
-        // 캔버스
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        const minimapCanvas = document.getElementById('minimap');
-        const mctx = minimapCanvas.getContext('2d');
+  <div id="joystick">
+    <div id="joystick-base"></div>
+    <div id="joystick-stick"></div>
+  </div>
+</div>
 
-        // 맵 크기
-        const MAP_W = 3000;
-        const MAP_H = 3000;
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const minimapCanvas = document.getElementById('minimap');
+  const mctx = minimapCanvas.getContext('2d');
 
-        // 미니맵 크기
-        minimapCanvas.width = 150;
-        minimapCanvas.height = 150;
+  const MAP_W = 3000, MAP_H = 3000;
+  const JOB_COLORS = { warrior: '#e74c3c', mage: '#9b59b6', archer: '#2ecc71' };
+  const JOB_NAMES = { warrior: '전사', mage: '마법사', archer: '궁수' };
 
-        let players = {};
-        let keys = {};
-        const bubbles = {};
-        let ping = 0;
+  // 보간을 위한 목표 위치 저장
+  let serverPlayers = {};  // 서버에서 받은 실제 위치
+  let renderPlayers = {};  // 보간된 렌더링용 위치
+  let keys = {};
+  const bubbles = {};
+  let ping = 0;
+  let selectedJob = 'warrior';
+  let chatCollapsed = false;
+  const cam = { x: 0, y: 0 };
 
-        // 카메라
-        const cam = { x: 0, y: 0 };
+  // 모바일 감지
+  const isMobile = 'ontouchstart' in window;
 
-        // 캔버스 크기
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
+  // 오프스크린 캔버스 (배경 타일 캐싱)
+  let bgCanvas = null;
+  let bgReady = false;
 
-        // 입장
-        function joinGame() {
-            const nickname = document.getElementById('nickname-input').value.trim();
-            if (!nickname) return alert('닉네임을 입력해주세요!');
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('game-screen').style.display = 'block';
-            if ('ontouchstart' in window) {
-                document.getElementById('joystick').style.display = 'block';
-            }
-            socket.emit('join', nickname);
-        }
+  function buildBackground() {
+    bgCanvas = document.createElement('canvas');
+    bgCanvas.width = 200;
+    bgCanvas.height = 200;
+    const bc = bgCanvas.getContext('2d');
+    bc.fillStyle = '#1c3d1c';
+    bc.fillRect(0, 0, 200, 200);
+    bc.strokeStyle = 'rgba(255,255,255,0.04)';
+    bc.lineWidth = 1;
+    bc.beginPath(); bc.moveTo(0, 0); bc.lineTo(200, 0); bc.stroke();
+    bc.beginPath(); bc.moveTo(0, 0); bc.lineTo(0, 200); bc.stroke();
+    bgReady = true;
+  }
+  buildBackground();
 
-        document.getElementById('nickname-input').addEventListener('keypress', e => {
-            if (e.key === 'Enter') joinGame();
-        });
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
 
-        socket.on('players', (data) => { players = data; });
+  // 직업 선택
+  document.querySelectorAll('.job-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.job-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedJob = btn.dataset.job;
+    });
+  });
 
-        // 채팅
-        socket.on('chat', (data) => {
-            const div = document.getElementById('chat-messages');
-            const p = document.createElement('p');
-            if (data.system) {
-                p.className = 'system';
-                p.textContent = data.message;
-            } else {
-                p.innerHTML = '<b style="color:' + (players[data.id]?.color || '#fff') + '">' + data.nickname + '</b>: ' + data.message;
-                bubbles[data.id] = { message: data.message, time: Date.now() };
-            }
-            div.appendChild(p);
-            div.scrollTop = div.scrollHeight;
-        });
+  function joinGame() {
+    const nickname = document.getElementById('nickname-input').value.trim();
+    if (!nickname) return alert('닉네임을 입력해주세요!');
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('game-screen').style.display = 'block';
+    if (isMobile) document.getElementById('joystick').style.display = 'block';
+    socket.emit('join', { nickname, job: selectedJob });
+  }
+  document.getElementById('nickname-input').addEventListener('keypress', e => {
+    if (e.key === 'Enter') joinGame();
+  });
 
-        function sendChat() {
-            const input = document.getElementById('chat-input');
-            if (input.value.trim()) {
-                socket.emit('chat', input.value.trim());
-                input.value = '';
-            }
-        }
-        document.getElementById('chat-input').addEventListener('keypress', e => {
-            if (e.key === 'Enter') sendChat();
-        });
+  function toggleChat() {
+    chatCollapsed = !chatCollapsed;
+    document.getElementById('chat-body').classList.toggle('collapsed', chatCollapsed);
+    document.getElementById('chat-toggle-btn').textContent = chatCollapsed ? '▼' : '▲';
+  }
 
-        // 키보드
-        document.addEventListener('keydown', e => { keys[e.key] = true; });
-        document.addEventListener('keyup', e => { keys[e.key] = false; });
+  // 서버에서 플레이어 위치 수신
+  socket.on('players', (data) => {
+    serverPlayers = data;
+    // 새 플레이어는 renderPlayers에 바로 추가
+    Object.keys(data).forEach(id => {
+      if (!renderPlayers[id]) {
+        renderPlayers[id] = { ...data[id] };
+      }
+    });
+    // 없어진 플레이어 제거
+    Object.keys(renderPlayers).forEach(id => {
+      if (!data[id]) delete renderPlayers[id];
+    });
+    updateStatUI();
+  });
 
-        setInterval(() => {
-            socket.emit('move', {
-                up: keys['ArrowUp'] || keys['w'],
-                down: keys['ArrowDown'] || keys['s'],
-                left: keys['ArrowLeft'] || keys['a'],
-                right: keys['ArrowRight'] || keys['d'],
-            });
-        }, 1000 / 60);
+  function updateStatUI() {
+    const me = serverPlayers[socket.id];
+    if (!me) return;
+    document.getElementById('ui-name').textContent = me.nickname + ' [' + (JOB_NAMES[me.job] || '') + ']';
+    document.getElementById('ui-level').textContent = me.level;
+    document.getElementById('ui-atk').textContent = me.atk;
+    document.getElementById('ui-def').textContent = me.def;
+    document.getElementById('hp-bar').style.width = (me.hp / me.maxHp * 100) + '%';
+    document.getElementById('exp-bar').style.width = (me.exp / me.expNext * 100) + '%';
+  }
 
-        // 조이스틱
-        const joystick = document.getElementById('joystick');
-        const stick = document.getElementById('joystick-stick');
-        joystick.addEventListener('touchmove', e => {
-            e.preventDefault();
-            const touch = e.touches[0];
-            const rect = joystick.getBoundingClientRect();
-            const cx = rect.left + rect.width / 2;
-            const cy = rect.top + rect.height / 2;
-            const dx = touch.clientX - cx;
-            const dy = touch.clientY - cy;
-            const dist = Math.min(40, Math.sqrt(dx * dx + dy * dy));
-            const angle = Math.atan2(dy, dx);
-            stick.style.transform = `translate(${Math.cos(angle) * dist}px, ${Math.sin(angle) * dist}px)`;
-            socket.emit('move', { up: dy < -15, down: dy > 15, left: dx < -15, right: dx > 15 });
-        }, { passive: false });
-        joystick.addEventListener('touchend', () => {
-            stick.style.transform = 'translate(0,0)';
-            socket.emit('move', { up: false, down: false, left: false, right: false });
-        });
+  // 채팅
+  socket.on('chat', (data) => {
+    const div = document.getElementById('chat-messages');
+    const p = document.createElement('p');
+    if (data.system) {
+      p.className = 'system';
+      p.textContent = data.message;
+    } else {
+      const color = serverPlayers[data.id]?.color || '#fff';
+      p.innerHTML = '<b style="color:' + color + '">' + data.nickname + '</b>: ' + data.message;
+      bubbles[data.id] = { message: data.message, time: Date.now() };
+    }
+    div.appendChild(p);
+    div.scrollTop = div.scrollHeight;
+    // 채팅 메시지 최대 50개 유지
+    while (div.children.length > 50) div.removeChild(div.firstChild);
+  });
 
-        // 핑
-        setInterval(() => { socket.emit('ping_check', Date.now()); }, 2000);
-        socket.on('pong_check', (ts) => { ping = Date.now() - ts; });
+  function sendChat() {
+    const input = document.getElementById('chat-input');
+    if (input.value.trim()) {
+      socket.emit('chat', input.value.trim());
+      input.value = '';
+    }
+  }
+  document.getElementById('chat-input').addEventListener('keypress', e => {
+    if (e.key === 'Enter') sendChat();
+  });
 
-        // 배경 타일 그리기
-        function drawBackground() {
-            // 잔디 배경
-            ctx.fillStyle = '#1a3a1a';
-            ctx.fillRect(-cam.x, -cam.y, MAP_W, MAP_H);
+  // 키보드
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    keys[e.key] = true;
+  });
+  document.addEventListener('keyup', e => { keys[e.key] = false; });
 
-            // 격자
-            ctx.strokeStyle = 'rgba(255,255,255,0.04)';
-            ctx.lineWidth = 1;
-            const startX = Math.floor(cam.x / 100) * 100;
-            const startY = Math.floor(cam.y / 100) * 100;
-            for (let x = startX; x < cam.x + canvas.width + 100; x += 100) {
-                ctx.beginPath();
-                ctx.moveTo(x - cam.x, 0);
-                ctx.lineTo(x - cam.x, canvas.height);
-                ctx.stroke();
-            }
-            for (let y = startY; y < cam.y + canvas.height + 100; y += 100) {
-                ctx.beginPath();
-                ctx.moveTo(0, y - cam.y);
-                ctx.lineTo(canvas.width, y - cam.y);
-                ctx.stroke();
-            }
+  // 이동 입력 전송 (30fps로 줄임)
+  setInterval(() => {
+    socket.emit('move', {
+      up: !!(keys['ArrowUp'] || keys['w']),
+      down: !!(keys['ArrowDown'] || keys['s']),
+      left: !!(keys['ArrowLeft'] || keys['a']),
+      right: !!(keys['ArrowRight'] || keys['d']),
+    });
+  }, 1000 / 30);
 
-            // 맵 경계선
-            ctx.strokeStyle = '#e74c3c';
-            ctx.lineWidth = 4;
-            ctx.strokeRect(-cam.x, -cam.y, MAP_W, MAP_H);
-        }
+  // 조이스틱
+  const joystick = document.getElementById('joystick');
+  const stick = document.getElementById('joystick-stick');
+  joystick.addEventListener('touchmove', e => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = joystick.getBoundingClientRect();
+    const dx = touch.clientX - (rect.left + rect.width / 2);
+    const dy = touch.clientY - (rect.top + rect.height / 2);
+    const dist = Math.min(35, Math.sqrt(dx*dx + dy*dy));
+    const angle = Math.atan2(dy, dx);
+    stick.style.transform = `translate(${Math.cos(angle)*dist}px, ${Math.sin(angle)*dist}px)`;
+    socket.emit('move', { up: dy < -12, down: dy > 12, left: dx < -12, right: dx > 12 });
+  }, { passive: false });
+  joystick.addEventListener('touchend', () => {
+    stick.style.transform = '';
+    socket.emit('move', { up: false, down: false, left: false, right: false });
+  });
 
-        // 미니맵 그리기
-        function drawMinimap() {
-            const mw = minimapCanvas.width;
-            const mh = minimapCanvas.height;
-            const scaleX = mw / MAP_W;
-            const scaleY = mh / MAP_H;
+  // 핑
+  setInterval(() => { socket.emit('ping_check', Date.now()); }, 3000);
+  socket.on('pong_check', (ts) => { ping = Date.now() - ts; });
 
-            mctx.clearRect(0, 0, mw, mh);
+  // 보간 계수 (0~1, 높을수록 빠르게 따라감)
+  const LERP = 0.2;
 
-            // 배경
-            mctx.fillStyle = 'rgba(20, 40, 20, 0.9)';
-            mctx.fillRect(0, 0, mw, mh);
+  function lerp(a, b, t) { return a + (b - a) * t; }
 
-            // 플레이어들
-            Object.values(players).forEach(p => {
-                const isMe = p.id === socket.id;
-                mctx.fillStyle = isMe ? 'white' : p.color;
-                const size = isMe ? 4 : 3;
-                mctx.fillRect(p.x * scaleX - size / 2, p.y * scaleY - size / 2, size, size);
-            });
+  // 배경 그리기 (타일 패턴)
+  function drawBackground() {
+    if (!bgReady) {
+      ctx.fillStyle = '#1c3d1c';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      return;
+    }
+    const pattern = ctx.createPattern(bgCanvas, 'repeat');
+    ctx.save();
+    ctx.translate(-cam.x % 200, -cam.y % 200);
+    ctx.fillStyle = pattern;
+    ctx.fillRect(-(canvas.width), -(canvas.height), canvas.width * 3, canvas.height * 3);
+    ctx.restore();
 
-            // 현재 화면 영역 표시
-            mctx.strokeStyle = 'rgba(255,255,255,0.5)';
-            mctx.lineWidth = 1;
-            mctx.strokeRect(
-                cam.x * scaleX, cam.y * scaleY,
-                canvas.width * scaleX, canvas.height * scaleY
-            );
-        }
+    // 맵 경계
+    ctx.strokeStyle = '#c0392b';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(-cam.x, -cam.y, MAP_W, MAP_H);
+  }
 
-        // 렌더링
-        function render() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // 미니맵
+  let minimapTimer = 0;
+  function drawMinimap(now) {
+    // 미니맵은 500ms마다만 업데이트 (성능 최적화)
+    if (now - minimapTimer < 500) return;
+    minimapTimer = now;
+    const mw = 120, mh = 120;
+    const sx = MAP_W / mw, sy = MAP_H / mh;
+    mctx.fillStyle = 'rgba(15,35,15,0.92)';
+    mctx.fillRect(0, 0, mw, mh);
+    Object.values(renderPlayers).forEach(p => {
+      const isMe = p.id === socket.id;
+      mctx.fillStyle = isMe ? 'white' : (p.color || '#fff');
+      const s = isMe ? 4 : 3;
+      mctx.fillRect(p.x / sx - s/2, p.y / sy - s/2, s, s);
+    });
+    mctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    mctx.lineWidth = 1;
+    mctx.strokeRect(cam.x / sx, cam.y / sy, canvas.width / sx, canvas.height / sy);
+  }
 
-            // 내 캐릭터 위치로 카메라 이동
-            const me = players[socket.id];
-            if (me) {
-                cam.x = me.x - canvas.width / 2;
-                cam.y = me.y - canvas.height / 2;
-                cam.x = Math.max(0, Math.min(MAP_W - canvas.width, cam.x));
-                cam.y = Math.max(0, Math.min(MAP_H - canvas.height, cam.y));
-            }
+  // 플레이어 그리기
+  function drawPlayer(p, sx, sy) {
+    const isMe = p.id === socket.id;
+    const color = JOB_COLORS[p.job] || p.color || '#fff';
 
-            // 배경
-            drawBackground();
+    // 직업별 모양 (shadowBlur 제거 - 모바일 성능)
+    ctx.fillStyle = color;
+    if (p.job === 'mage') {
+      ctx.beginPath();
+      ctx.moveTo(sx, sy - 20); ctx.lineTo(sx + 17, sy);
+      ctx.lineTo(sx, sy + 20); ctx.lineTo(sx - 17, sy);
+      ctx.closePath(); ctx.fill();
+    } else if (p.job === 'archer') {
+      ctx.beginPath();
+      ctx.moveTo(sx, sy - 20); ctx.lineTo(sx + 18, sy + 17);
+      ctx.lineTo(sx - 18, sy + 17); ctx.closePath(); ctx.fill();
+    } else {
+      ctx.fillRect(sx - 18, sy - 18, 36, 36);
+    }
 
-            // 플레이어
-            Object.values(players).forEach(p => {
-                const sx = p.x - cam.x;
-                const sy = p.y - cam.y;
+    // 내 캐릭터 테두리 강조
+    if (isMe) {
+      ctx.strokeStyle = 'white';
+      ctx.lineWidth = 2;
+      if (p.job === 'mage') {
+        ctx.beginPath();
+        ctx.moveTo(sx, sy - 20); ctx.lineTo(sx + 17, sy);
+        ctx.lineTo(sx, sy + 20); ctx.lineTo(sx - 17, sy);
+        ctx.closePath(); ctx.stroke();
+      } else if (p.job === 'archer') {
+        ctx.beginPath();
+        ctx.moveTo(sx, sy - 20); ctx.lineTo(sx + 18, sy + 17);
+        ctx.lineTo(sx - 18, sy + 17); ctx.closePath(); ctx.stroke();
+      } else {
+        ctx.strokeRect(sx - 18, sy - 18, 36, 36);
+      }
+    }
 
-                // 화면 밖이면 스킵
-                if (sx < -50 || sx > canvas.width + 50 || sy < -50 || sy > canvas.height + 50) return;
+    // HP 바
+    const hpRatio = Math.max(0, p.hp / p.maxHp);
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(sx - 20, sy - 30, 40, 4);
+    ctx.fillStyle = hpRatio > 0.5 ? '#2ecc71' : hpRatio > 0.25 ? '#f39c12' : '#e74c3c';
+    ctx.fillRect(sx - 20, sy - 30, 40 * hpRatio, 4);
 
-                const isMe = p.id === socket.id;
+    // 닉네임 + 레벨
+    ctx.fillStyle = 'white';
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Lv.' + p.level + ' ' + p.nickname, sx, sy - 34);
 
-                // 네모
-                ctx.fillStyle = p.color;
-                ctx.shadowColor = p.color;
-                ctx.shadowBlur = isMe ? 15 : 5;
-                ctx.fillRect(sx - 20, sy - 20, 40, 40);
-                ctx.shadowBlur = 0;
+    // 말풍선
+    const bubble = bubbles[p.id];
+    if (bubble && Date.now() - bubble.time < 4000) {
+      const msg = bubble.message.length > 16 ? bubble.message.slice(0, 16) + '..' : bubble.message;
+      ctx.font = '11px sans-serif';
+      const bw = ctx.measureText(msg).width + 16;
+      const bh = 22;
+      const bx = sx - bw / 2;
+      const by = sy - 70;
+      ctx.fillStyle = 'white';
+      ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 5); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(sx - 4, by + bh); ctx.lineTo(sx + 4, by + bh); ctx.lineTo(sx, by + bh + 6);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#111';
+      ctx.textAlign = 'center';
+      ctx.fillText(msg, sx, by + 15);
+    }
+  }
 
-                // 테두리
-                ctx.strokeStyle = isMe ? 'white' : 'rgba(255,255,255,0.3)';
-                ctx.lineWidth = isMe ? 2 : 1;
-                ctx.strokeRect(sx - 20, sy - 20, 40, 40);
+  let lastTime = 0;
 
-                // 닉네임
-                ctx.fillStyle = 'white';
-                ctx.font = '13px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText(p.nickname, sx, sy - 28);
+  function render(now) {
+    const dt = Math.min((now - lastTime) / 1000, 0.1);
+    lastTime = now;
 
-                // 말풍선
-                const bubble = bubbles[p.id];
-                if (bubble && Date.now() - bubble.time < 4000) {
-                    const msg = bubble.message.length > 20 ? bubble.message.slice(0, 20) + '...' : bubble.message;
-                    ctx.font = '12px sans-serif';
-                    const bw = ctx.measureText(msg).width + 20;
-                    const bh = 28;
-                    const bx = sx - bw / 2;
-                    const by = sy - 78;
+    // 보간: renderPlayers를 serverPlayers 쪽으로 부드럽게 이동
+    Object.keys(renderPlayers).forEach(id => {
+      const r = renderPlayers[id];
+      const s = serverPlayers[id];
+      if (!s) return;
+      r.x = lerp(r.x, s.x, LERP);
+      r.y = lerp(r.y, s.y, LERP);
+      // 나머지 정보는 바로 복사
+      r.hp = s.hp; r.maxHp = s.maxHp;
+      r.level = s.level; r.job = s.job;
+      r.nickname = s.nickname; r.color = s.color;
+    });
 
-                    ctx.fillStyle = 'white';
-                    ctx.beginPath();
-                    ctx.roundRect(bx, by, bw, bh, 6);
-                    ctx.fill();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                    ctx.beginPath();
-                    ctx.moveTo(sx - 6, by + bh);
-                    ctx.lineTo(sx + 6, by + bh);
-                    ctx.lineTo(sx, by + bh + 8);
-                    ctx.closePath();
-                    ctx.fill();
+    // 카메라: 내 캐릭터 중심
+    const me = renderPlayers[socket.id];
+    if (me) {
+      cam.x = Math.max(0, Math.min(MAP_W - canvas.width, me.x - canvas.width / 2));
+      cam.y = Math.max(0, Math.min(MAP_H - canvas.height, me.y - canvas.height / 2));
+    }
 
-                    ctx.fillStyle = '#222';
-                    ctx.textAlign = 'center';
-                    ctx.fillText(msg, sx, by + 19);
-                }
-            });
+    drawBackground();
 
-            // UI - 핑
-            ctx.fillStyle = ping < 50 ? '#2ecc71' : ping < 100 ? '#f39c12' : '#e74c3c';
-            ctx.font = 'bold 13px sans-serif';
-            ctx.textAlign = 'left';
-            ctx.fillText('PING: ' + ping + 'ms', 10, 20);
+    // 화면 안의 플레이어만 렌더링
+    Object.values(renderPlayers).forEach(p => {
+      const sx = p.x - cam.x;
+      const sy = p.y - cam.y;
+      if (sx < -60 || sx > canvas.width + 60 || sy < -60 || sy > canvas.height + 60) return;
+      drawPlayer(p, sx, sy);
+    });
 
-            // UI - 좌표
-            if (me) {
-                ctx.fillStyle = 'rgba(255,255,255,0.5)';
-                ctx.font = '12px sans-serif';
-                ctx.fillText('X: ' + Math.floor(me.x) + '  Y: ' + Math.floor(me.y), 10, 38);
-            }
+    // 핑 표시
+    ctx.fillStyle = ping < 80 ? '#2ecc71' : ping < 150 ? '#f39c12' : '#e74c3c';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('PING: ' + ping + 'ms', 10, canvas.height - 8);
+    if (me) {
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.font = '10px sans-serif';
+      ctx.fillText('X:' + Math.floor(me.x) + ' Y:' + Math.floor(me.y), 10, canvas.height - 22);
+    }
 
-            // 미니맵
-            drawMinimap();
-
-            requestAnimationFrame(render);
-        }
-        render();
-    </script>
+    drawMinimap(now);
+    requestAnimationFrame(render);
+  }
+  requestAnimationFrame(render);
+</script>
 </body>
-
 </html>
