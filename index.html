@@ -1,281 +1,474 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>네모 게임</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #1a1a2e; color: white; font-family: sans-serif; overflow: hidden; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>네모 RPG</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    #login-screen {
-      position: fixed; inset: 0;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      background: #1a1a2e; z-index: 100;
-    }
-    #login-screen h1 { font-size: 2rem; margin-bottom: 20px; color: #eee; }
-    #login-screen input {
-      padding: 12px 20px; font-size: 1rem;
-      border: 2px solid #444; border-radius: 8px;
-      background: #2a2a4e; color: white;
-      outline: none; margin-bottom: 12px; width: 250px;
-    }
-    #login-screen button {
-      padding: 12px 40px; font-size: 1rem;
-      background: #3498db; color: white;
-      border: none; border-radius: 8px; cursor: pointer; width: 250px;
-    }
+        body {
+            background: #1a1a2e;
+            color: white;
+            font-family: sans-serif;
+            overflow: hidden;
+        }
 
-    #game-screen { display: none; }
+        /* 로그인 화면 */
+        #login-screen {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #1a1a2e;
+            z-index: 100;
+        }
 
-    canvas { display: block; background: #16213e; }
+        #login-screen h1 {
+            font-size: 2.5rem;
+            margin-bottom: 8px;
+            color: #eee;
+            letter-spacing: 2px;
+        }
 
-    #chat-container {
-      position: fixed; bottom: 0; left: 0; right: 0;
-      background: rgba(0,0,0,0.6);
-      padding: 8px;
-    }
-    #chat-messages {
-      height: 100px; overflow-y: auto;
-      font-size: 0.8rem; margin-bottom: 6px;
-      padding: 4px;
-    }
-    #chat-messages p { margin: 2px 0; }
-    #chat-messages .system { color: #aaa; font-style: italic; }
-    #chat-input-row { display: flex; gap: 6px; }
-    #chat-input {
-      flex: 1; padding: 8px;
-      background: #2a2a4e; color: white;
-      border: 1px solid #444; border-radius: 6px;
-      font-size: 0.9rem;
-    }
-    #chat-send {
-      padding: 8px 16px;
-      background: #3498db; color: white;
-      border: none; border-radius: 6px; cursor: pointer;
-    }
+        #login-screen p {
+            color: #888;
+            margin-bottom: 24px;
+            font-size: 0.9rem;
+        }
 
-    #joystick {
-      position: fixed; bottom: 160px; left: 30px;
-      width: 120px; height: 120px;
-      display: none;
-    }
-    #joystick-base {
-      position: absolute; inset: 0;
-      background: rgba(255,255,255,0.1);
-      border-radius: 50%; border: 2px solid rgba(255,255,255,0.3);
-    }
-    #joystick-stick {
-      position: absolute;
-      width: 50px; height: 50px;
-      background: rgba(255,255,255,0.5);
-      border-radius: 50%;
-      top: 35px; left: 35px;
-      transition: transform 0.05s;
-    }
-  </style>
+        #login-screen input {
+            padding: 12px 20px;
+            font-size: 1rem;
+            border: 2px solid #444;
+            border-radius: 8px;
+            background: #2a2a4e;
+            color: white;
+            outline: none;
+            margin-bottom: 12px;
+            width: 260px;
+            text-align: center;
+        }
+
+        #login-screen button {
+            padding: 12px 40px;
+            font-size: 1rem;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 260px;
+            letter-spacing: 1px;
+        }
+
+        #login-screen button:hover {
+            background: #2980b9;
+        }
+
+        /* 게임 화면 */
+        #game-screen {
+            display: none;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        /* 채팅 */
+        #chat-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.65);
+            padding: 8px;
+        }
+
+        #chat-messages {
+            height: 90px;
+            overflow-y: auto;
+            font-size: 0.78rem;
+            margin-bottom: 6px;
+            padding: 4px;
+        }
+
+        #chat-messages p {
+            margin: 2px 0;
+        }
+
+        #chat-messages .system {
+            color: #aaa;
+            font-style: italic;
+        }
+
+        #chat-input-row {
+            display: flex;
+            gap: 6px;
+        }
+
+        #chat-input {
+            flex: 1;
+            padding: 8px;
+            background: #2a2a4e;
+            color: white;
+            border: 1px solid #444;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        #chat-send {
+            padding: 8px 16px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        /* 미니맵 */
+        #minimap {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            width: 150px;
+            height: 150px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        /* 조이스틱 */
+        #joystick {
+            position: fixed;
+            bottom: 160px;
+            left: 30px;
+            width: 120px;
+            height: 120px;
+            display: none;
+        }
+
+        #joystick-base {
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        #joystick-stick {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            top: 35px;
+            left: 35px;
+            transition: transform 0.05s;
+        }
+    </style>
 </head>
+
 <body>
 
-<div id="login-screen">
-  <h1>네모 게임</h1>
-  <input id="nickname-input" placeholder="닉네임 입력" maxlength="10" />
-  <button onclick="joinGame()">입장</button>
-</div>
-
-<div id="game-screen">
-  <canvas id="canvas"></canvas>
-  <div id="chat-container">
-    <div id="chat-messages"></div>
-    <div id="chat-input-row">
-      <input id="chat-input" placeholder="채팅 입력..." autocomplete="off" />
-      <button id="chat-send" onclick="sendChat()">전송</button>
+    <div id="login-screen">
+        <h1>네모 RPG</h1>
+        <p>광활한 세계로 모험을 떠나세요</p>
+        <input id="nickname-input" placeholder="닉네임 입력" maxlength="10" />
+        <button onclick="joinGame()">모험 시작</button>
     </div>
-  </div>
-  <div id="joystick">
-    <div id="joystick-base"></div>
-    <div id="joystick-stick"></div>
-  </div>
-</div>
 
-<script src="/socket.io/socket.io.js"></script>
-<script>
-  const socket = io();
-  const canvas = document.getElementById('canvas');
-  const ctx = canvas.getContext('2d');
-  let players = {};
-  let keys = {};
-  const bubbles = {};
+    <div id="game-screen">
+        <canvas id="canvas"></canvas>
+        <canvas id="minimap"></canvas>
+        <div id="chat-container">
+            <div id="chat-messages"></div>
+            <div id="chat-input-row">
+                <input id="chat-input" placeholder="채팅 입력..." autocomplete="off" />
+                <button id="chat-send" onclick="sendChat()">전송</button>
+            </div>
+        </div>
+        <div id="joystick">
+            <div id="joystick-base"></div>
+            <div id="joystick-stick"></div>
+        </div>
+    </div>
 
-  function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-  }
-  resizeCanvas();
-  window.addEventListener('resize', resizeCanvas);
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
 
-  function joinGame() {
-    const nickname = document.getElementById('nickname-input').value.trim();
-    if (!nickname) return alert('닉네임을 입력해주세요!');
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('game-screen').style.display = 'block';
-    if ('ontouchstart' in window) {
-      document.getElementById('joystick').style.display = 'block';
-    }
-    socket.emit('join', nickname);
-  }
+        // 캔버스
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const minimapCanvas = document.getElementById('minimap');
+        const mctx = minimapCanvas.getContext('2d');
 
-  document.getElementById('nickname-input').addEventListener('keypress', e => {
-    if (e.key === 'Enter') joinGame();
-  });
+        // 맵 크기
+        const MAP_W = 3000;
+        const MAP_H = 3000;
 
-  socket.on('players', (data) => { players = data; });
+        // 미니맵 크기
+        minimapCanvas.width = 150;
+        minimapCanvas.height = 150;
 
-  socket.on('chat', (data) => {
-    const div = document.getElementById('chat-messages');
-    const p = document.createElement('p');
-    if (data.system) {
-      p.className = 'system';
-      p.textContent = data.message;
-    } else {
-      p.innerHTML = '<b style="color:' + (players[data.id]?.color || '#fff') + '">' + data.nickname + '</b>: ' + data.message;
-      // 말풍선 등록
-      bubbles[data.id] = { message: data.message, time: Date.now() };
-    }
-    div.appendChild(p);
-    div.scrollTop = div.scrollHeight;
-  });
+        let players = {};
+        let keys = {};
+        const bubbles = {};
+        let ping = 0;
 
-  function sendChat() {
-    const input = document.getElementById('chat-input');
-    if (input.value.trim()) {
-      socket.emit('chat', input.value.trim());
-      input.value = '';
-    }
-  }
-  document.getElementById('chat-input').addEventListener('keypress', e => {
-    if (e.key === 'Enter') sendChat();
-  });
+        // 카메라
+        const cam = { x: 0, y: 0 };
 
-  document.addEventListener('keydown', e => { keys[e.key] = true; });
-  document.addEventListener('keyup', e => { keys[e.key] = false; });
+        // 캔버스 크기
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
 
-  setInterval(() => {
-    socket.emit('move', {
-      up: keys['ArrowUp'] || keys['w'],
-      down: keys['ArrowDown'] || keys['s'],
-      left: keys['ArrowLeft'] || keys['a'],
-      right: keys['ArrowRight'] || keys['d'],
-    });
-  }, 1000 / 60);
+        // 입장
+        function joinGame() {
+            const nickname = document.getElementById('nickname-input').value.trim();
+            if (!nickname) return alert('닉네임을 입력해주세요!');
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'block';
+            if ('ontouchstart' in window) {
+                document.getElementById('joystick').style.display = 'block';
+            }
+            socket.emit('join', nickname);
+        }
 
-  // 모바일 조이스틱
-  const joystick = document.getElementById('joystick');
-  const stick = document.getElementById('joystick-stick');
+        document.getElementById('nickname-input').addEventListener('keypress', e => {
+            if (e.key === 'Enter') joinGame();
+        });
 
-  joystick.addEventListener('touchstart', e => {});
-  joystick.addEventListener('touchmove', e => {
-    e.preventDefault();
-    const touch = e.touches[0];
-    const rect = joystick.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    const dx = touch.clientX - cx;
-    const dy = touch.clientY - cy;
-    const dist = Math.min(40, Math.sqrt(dx*dx + dy*dy));
-    const angle = Math.atan2(dy, dx);
-    stick.style.transform = `translate(${Math.cos(angle)*dist}px, ${Math.sin(angle)*dist}px)`;
-    socket.emit('move', {
-      up: dy < -15, down: dy > 15, left: dx < -15, right: dx > 15
-    });
-  }, { passive: false });
-  joystick.addEventListener('touchend', () => {
-    stick.style.transform = 'translate(0,0)';
-    socket.emit('move', { up: false, down: false, left: false, right: false });
-  });
+        socket.on('players', (data) => { players = data; });
 
-  // 핑 측정
-  let ping = 0;
-  setInterval(() => { socket.emit('ping_check', Date.now()); }, 2000);
-  socket.on('pong_check', (timestamp) => { ping = Date.now() - timestamp; });
+        // 채팅
+        socket.on('chat', (data) => {
+            const div = document.getElementById('chat-messages');
+            const p = document.createElement('p');
+            if (data.system) {
+                p.className = 'system';
+                p.textContent = data.message;
+            } else {
+                p.innerHTML = '<b style="color:' + (players[data.id]?.color || '#fff') + '">' + data.nickname + '</b>: ' + data.message;
+                bubbles[data.id] = { message: data.message, time: Date.now() };
+            }
+            div.appendChild(p);
+            div.scrollTop = div.scrollHeight;
+        });
 
-  // 게임 렌더링
-  function render() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+        function sendChat() {
+            const input = document.getElementById('chat-input');
+            if (input.value.trim()) {
+                socket.emit('chat', input.value.trim());
+                input.value = '';
+            }
+        }
+        document.getElementById('chat-input').addEventListener('keypress', e => {
+            if (e.key === 'Enter') sendChat();
+        });
 
-    // 배경 격자
-    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
-    ctx.lineWidth = 1;
-    for (let x = 0; x < canvas.width; x += 50) {
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
-    }
-    for (let y = 0; y < canvas.height; y += 50) {
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
-    }
+        // 키보드
+        document.addEventListener('keydown', e => { keys[e.key] = true; });
+        document.addEventListener('keyup', e => { keys[e.key] = false; });
 
-    // 핑 표시
-    ctx.fillStyle = ping < 50 ? '#2ecc71' : ping < 100 ? '#f39c12' : '#e74c3c';
-    ctx.font = 'bold 14px sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText('PING: ' + ping + 'ms', 10, 20);
+        setInterval(() => {
+            socket.emit('move', {
+                up: keys['ArrowUp'] || keys['w'],
+                down: keys['ArrowDown'] || keys['s'],
+                left: keys['ArrowLeft'] || keys['a'],
+                right: keys['ArrowRight'] || keys['d'],
+            });
+        }, 1000 / 60);
 
-    // 플레이어 그리기
-    Object.values(players).forEach(p => {
-      const isMe = p.id === socket.id;
+        // 조이스틱
+        const joystick = document.getElementById('joystick');
+        const stick = document.getElementById('joystick-stick');
+        joystick.addEventListener('touchmove', e => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = joystick.getBoundingClientRect();
+            const cx = rect.left + rect.width / 2;
+            const cy = rect.top + rect.height / 2;
+            const dx = touch.clientX - cx;
+            const dy = touch.clientY - cy;
+            const dist = Math.min(40, Math.sqrt(dx * dx + dy * dy));
+            const angle = Math.atan2(dy, dx);
+            stick.style.transform = `translate(${Math.cos(angle) * dist}px, ${Math.sin(angle) * dist}px)`;
+            socket.emit('move', { up: dy < -15, down: dy > 15, left: dx < -15, right: dx > 15 });
+        }, { passive: false });
+        joystick.addEventListener('touchend', () => {
+            stick.style.transform = 'translate(0,0)';
+            socket.emit('move', { up: false, down: false, left: false, right: false });
+        });
 
-      // 네모
-      ctx.fillStyle = p.color;
-      ctx.shadowColor = p.color;
-      ctx.shadowBlur = isMe ? 15 : 5;
-      ctx.fillRect(p.x - 20, p.y - 20, 40, 40);
-      ctx.shadowBlur = 0;
+        // 핑
+        setInterval(() => { socket.emit('ping_check', Date.now()); }, 2000);
+        socket.on('pong_check', (ts) => { ping = Date.now() - ts; });
 
-      // 테두리
-      ctx.strokeStyle = isMe ? 'white' : 'rgba(255,255,255,0.3)';
-      ctx.lineWidth = isMe ? 2 : 1;
-      ctx.strokeRect(p.x - 20, p.y - 20, 40, 40);
+        // 배경 타일 그리기
+        function drawBackground() {
+            // 잔디 배경
+            ctx.fillStyle = '#1a3a1a';
+            ctx.fillRect(-cam.x, -cam.y, MAP_W, MAP_H);
 
-      // 닉네임
-      ctx.fillStyle = 'white';
-      ctx.font = '13px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(p.nickname, p.x, p.y - 28);
+            // 격자
+            ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+            ctx.lineWidth = 1;
+            const startX = Math.floor(cam.x / 100) * 100;
+            const startY = Math.floor(cam.y / 100) * 100;
+            for (let x = startX; x < cam.x + canvas.width + 100; x += 100) {
+                ctx.beginPath();
+                ctx.moveTo(x - cam.x, 0);
+                ctx.lineTo(x - cam.x, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = startY; y < cam.y + canvas.height + 100; y += 100) {
+                ctx.beginPath();
+                ctx.moveTo(0, y - cam.y);
+                ctx.lineTo(canvas.width, y - cam.y);
+                ctx.stroke();
+            }
 
-      // 말풍선
-      const bubble = bubbles[p.id];
-      if (bubble && Date.now() - bubble.time < 4000) {
-        const msg = bubble.message.length > 20 ? bubble.message.slice(0, 20) + '...' : bubble.message;
-        ctx.font = '12px sans-serif';
-        const bw = ctx.measureText(msg).width + 20;
-        const bh = 28;
-        const bx = p.x - bw / 2;
-        const by = p.y - 75;
+            // 맵 경계선
+            ctx.strokeStyle = '#e74c3c';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(-cam.x, -cam.y, MAP_W, MAP_H);
+        }
 
-        // 말풍선 배경
-        ctx.fillStyle = 'white';
-        ctx.beginPath();
-        ctx.roundRect(bx, by, bw, bh, 6);
-        ctx.fill();
+        // 미니맵 그리기
+        function drawMinimap() {
+            const mw = minimapCanvas.width;
+            const mh = minimapCanvas.height;
+            const scaleX = mw / MAP_W;
+            const scaleY = mh / MAP_H;
 
-        // 말풍선 꼬리
-        ctx.beginPath();
-        ctx.moveTo(p.x - 6, by + bh);
-        ctx.lineTo(p.x + 6, by + bh);
-        ctx.lineTo(p.x, by + bh + 8);
-        ctx.closePath();
-        ctx.fill();
+            mctx.clearRect(0, 0, mw, mh);
 
-        // 말풍선 텍스트
-        ctx.fillStyle = '#222';
-        ctx.textAlign = 'center';
-        ctx.fillText(msg, p.x, by + 19);
-      }
-    });
+            // 배경
+            mctx.fillStyle = 'rgba(20, 40, 20, 0.9)';
+            mctx.fillRect(0, 0, mw, mh);
 
-    requestAnimationFrame(render);
-  }
-  render();
-</script>
+            // 플레이어들
+            Object.values(players).forEach(p => {
+                const isMe = p.id === socket.id;
+                mctx.fillStyle = isMe ? 'white' : p.color;
+                const size = isMe ? 4 : 3;
+                mctx.fillRect(p.x * scaleX - size / 2, p.y * scaleY - size / 2, size, size);
+            });
+
+            // 현재 화면 영역 표시
+            mctx.strokeStyle = 'rgba(255,255,255,0.5)';
+            mctx.lineWidth = 1;
+            mctx.strokeRect(
+                cam.x * scaleX, cam.y * scaleY,
+                canvas.width * scaleX, canvas.height * scaleY
+            );
+        }
+
+        // 렌더링
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 내 캐릭터 위치로 카메라 이동
+            const me = players[socket.id];
+            if (me) {
+                cam.x = me.x - canvas.width / 2;
+                cam.y = me.y - canvas.height / 2;
+                cam.x = Math.max(0, Math.min(MAP_W - canvas.width, cam.x));
+                cam.y = Math.max(0, Math.min(MAP_H - canvas.height, cam.y));
+            }
+
+            // 배경
+            drawBackground();
+
+            // 플레이어
+            Object.values(players).forEach(p => {
+                const sx = p.x - cam.x;
+                const sy = p.y - cam.y;
+
+                // 화면 밖이면 스킵
+                if (sx < -50 || sx > canvas.width + 50 || sy < -50 || sy > canvas.height + 50) return;
+
+                const isMe = p.id === socket.id;
+
+                // 네모
+                ctx.fillStyle = p.color;
+                ctx.shadowColor = p.color;
+                ctx.shadowBlur = isMe ? 15 : 5;
+                ctx.fillRect(sx - 20, sy - 20, 40, 40);
+                ctx.shadowBlur = 0;
+
+                // 테두리
+                ctx.strokeStyle = isMe ? 'white' : 'rgba(255,255,255,0.3)';
+                ctx.lineWidth = isMe ? 2 : 1;
+                ctx.strokeRect(sx - 20, sy - 20, 40, 40);
+
+                // 닉네임
+                ctx.fillStyle = 'white';
+                ctx.font = '13px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(p.nickname, sx, sy - 28);
+
+                // 말풍선
+                const bubble = bubbles[p.id];
+                if (bubble && Date.now() - bubble.time < 4000) {
+                    const msg = bubble.message.length > 20 ? bubble.message.slice(0, 20) + '...' : bubble.message;
+                    ctx.font = '12px sans-serif';
+                    const bw = ctx.measureText(msg).width + 20;
+                    const bh = 28;
+                    const bx = sx - bw / 2;
+                    const by = sy - 78;
+
+                    ctx.fillStyle = 'white';
+                    ctx.beginPath();
+                    ctx.roundRect(bx, by, bw, bh, 6);
+                    ctx.fill();
+
+                    ctx.beginPath();
+                    ctx.moveTo(sx - 6, by + bh);
+                    ctx.lineTo(sx + 6, by + bh);
+                    ctx.lineTo(sx, by + bh + 8);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    ctx.fillStyle = '#222';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(msg, sx, by + 19);
+                }
+            });
+
+            // UI - 핑
+            ctx.fillStyle = ping < 50 ? '#2ecc71' : ping < 100 ? '#f39c12' : '#e74c3c';
+            ctx.font = 'bold 13px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('PING: ' + ping + 'ms', 10, 20);
+
+            // UI - 좌표
+            if (me) {
+                ctx.fillStyle = 'rgba(255,255,255,0.5)';
+                ctx.font = '12px sans-serif';
+                ctx.fillText('X: ' + Math.floor(me.x) + '  Y: ' + Math.floor(me.y), 10, 38);
+            }
+
+            // 미니맵
+            drawMinimap();
+
+            requestAnimationFrame(render);
+        }
+        render();
+    </script>
 </body>
+
 </html>
