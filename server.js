@@ -52,7 +52,7 @@ io.on('connection', (socket) => {
   socket.on('chat', (msg) => {
     const p = players[socket.id];
     if (!p) return;
-    io.emit('chat', { nickname: p.nickname, message: msg, system: false });
+    io.emit('chat', { id: socket.id, nickname: p.nickname, message: msg, system: false });
   });
 
   socket.on('disconnect', () => {

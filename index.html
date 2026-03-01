@@ -29,10 +29,7 @@
 
     #game-screen { display: none; }
 
-    canvas {
-      display: block;
-      background: #16213e;
-    }
+    canvas { display: block; background: #16213e; }
 
     #chat-container {
       position: fixed; bottom: 0; left: 0; right: 0;
@@ -59,7 +56,6 @@
       border: none; border-radius: 6px; cursor: pointer;
     }
 
-    /* 모바일 조이스틱 */
     #joystick {
       position: fixed; bottom: 160px; left: 30px;
       width: 120px; height: 120px;
@@ -109,10 +105,9 @@
   const canvas = document.getElementById('canvas');
   const ctx = canvas.getContext('2d');
   let players = {};
-  let myId = null;
   let keys = {};
+  const bubbles = {};
 
-  // 캔버스 크기 설정
   function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -120,31 +115,23 @@
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
 
-  // 입장
   function joinGame() {
     const nickname = document.getElementById('nickname-input').value.trim();
     if (!nickname) return alert('닉네임을 입력해주세요!');
-    myId = socket.id;
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('game-screen').style.display = 'block';
-
-    // 모바일이면 조이스틱 표시
     if ('ontouchstart' in window) {
       document.getElementById('joystick').style.display = 'block';
     }
-
     socket.emit('join', nickname);
   }
 
-  // 엔터키 입장
   document.getElementById('nickname-input').addEventListener('keypress', e => {
     if (e.key === 'Enter') joinGame();
   });
 
-  // 플레이어 업데이트
   socket.on('players', (data) => { players = data; });
 
-  // 채팅
   socket.on('chat', (data) => {
     const div = document.getElementById('chat-messages');
     const p = document.createElement('p');
@@ -152,13 +139,14 @@
       p.className = 'system';
       p.textContent = data.message;
     } else {
-      p.innerHTML = '<b style="color:' + (players[socket.id]?.color || '#fff') + '">' + data.nickname + '</b>: ' + data.message;
+      p.innerHTML = '<b style="color:' + (players[data.id]?.color || '#fff') + '">' + data.nickname + '</b>: ' + data.message;
+      // 말풍선 등록
+      bubbles[data.id] = { message: data.message, time: Date.now() };
     }
     div.appendChild(p);
     div.scrollTop = div.scrollHeight;
   });
 
-  // 채팅 전송
   function sendChat() {
     const input = document.getElementById('chat-input');
     if (input.value.trim()) {
@@ -170,11 +158,9 @@
     if (e.key === 'Enter') sendChat();
   });
 
-  // PC 키보드
   document.addEventListener('keydown', e => { keys[e.key] = true; });
   document.addEventListener('keyup', e => { keys[e.key] = false; });
 
-  // 이동 전송
   setInterval(() => {
     socket.emit('move', {
       up: keys['ArrowUp'] || keys['w'],
@@ -187,10 +173,8 @@
   // 모바일 조이스틱
   const joystick = document.getElementById('joystick');
   const stick = document.getElementById('joystick-stick');
-  let joystickActive = false;
-  let joystickDir = { up: false, down: false, left: false, right: false };
 
-  joystick.addEventListener('touchstart', e => { joystickActive = true; });
+  joystick.addEventListener('touchstart', e => {});
   joystick.addEventListener('touchmove', e => {
     e.preventDefault();
     const touch = e.touches[0];
@@ -202,28 +186,19 @@
     const dist = Math.min(40, Math.sqrt(dx*dx + dy*dy));
     const angle = Math.atan2(dy, dx);
     stick.style.transform = `translate(${Math.cos(angle)*dist}px, ${Math.sin(angle)*dist}px)`;
-    joystickDir = {
-      up: dy < -15,
-      down: dy > 15,
-      left: dx < -15,
-      right: dx > 15
-    };
-    socket.emit('move', joystickDir);
+    socket.emit('move', {
+      up: dy < -15, down: dy > 15, left: dx < -15, right: dx > 15
+    });
   }, { passive: false });
   joystick.addEventListener('touchend', () => {
-    joystickActive = false;
     stick.style.transform = 'translate(0,0)';
     socket.emit('move', { up: false, down: false, left: false, right: false });
   });
 
   // 핑 측정
   let ping = 0;
-  setInterval(() => {
-    socket.emit('ping_check', Date.now());
-  }, 2000);
-  socket.on('pong_check', (timestamp) => {
-    ping = Date.now() - timestamp;
-  });
+  setInterval(() => { socket.emit('ping_check', Date.now()); }, 2000);
+  socket.on('pong_check', (timestamp) => { ping = Date.now() - timestamp; });
 
   // 게임 렌더링
   function render() {
@@ -256,7 +231,7 @@
       ctx.fillRect(p.x - 20, p.y - 20, 40, 40);
       ctx.shadowBlur = 0;
 
-      // 테두리 (내 캐릭터는 흰색)
+      // 테두리
       ctx.strokeStyle = isMe ? 'white' : 'rgba(255,255,255,0.3)';
       ctx.lineWidth = isMe ? 2 : 1;
       ctx.strokeRect(p.x - 20, p.y - 20, 40, 40);
@@ -266,6 +241,36 @@
       ctx.font = '13px sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(p.nickname, p.x, p.y - 28);
+
+      // 말풍선
+      const bubble = bubbles[p.id];
+      if (bubble && Date.now() - bubble.time < 4000) {
+        const msg = bubble.message.length > 20 ? bubble.message.slice(0, 20) + '...' : bubble.message;
+        ctx.font = '12px sans-serif';
+        const bw = ctx.measureText(msg).width + 20;
+        const bh = 28;
+        const bx = p.x - bw / 2;
+        const by = p.y - 75;
+
+        // 말풍선 배경
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.roundRect(bx, by, bw, bh, 6);
+        ctx.fill();
+
+        // 말풍선 꼬리
+        ctx.beginPath();
+        ctx.moveTo(p.x - 6, by + bh);
+        ctx.lineTo(p.x + 6, by + bh);
+        ctx.lineTo(p.x, by + bh + 8);
+        ctx.closePath();
+        ctx.fill();
+
+        // 말풍선 텍스트
+        ctx.fillStyle = '#222';
+        ctx.textAlign = 'center';
+        ctx.fillText(msg, p.x, by + 19);
+      }
     });
 
     requestAnimationFrame(render);
